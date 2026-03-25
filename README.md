@@ -41,7 +41,7 @@ packages/
 
 - Node.js 20+
 - npm 10+
-- Docker (for local PostgreSQL via `docker-compose`)
+- Supabase project (Postgres)
 
 ## Local Setup
 
@@ -51,18 +51,17 @@ packages/
 npm install
 ```
 
-2. Start PostgreSQL:
-
-```bash
-docker compose up -d
-```
-
-3. Create env files:
+2. Create env files:
 
 ```powershell
 Copy-Item .env.example apps/api/.env
 Copy-Item apps/web/.env.local.example apps/web/.env.local
 ```
+
+3. Update `apps/api/.env` with your Supabase values:
+
+- `DATABASE_URL`: Supabase pooled connection string (port `6543`)
+- `DIRECT_URL`: Supabase direct connection string (port `5432`, `sslmode=require`)
 
 4. Generate Prisma client + apply migration:
 
