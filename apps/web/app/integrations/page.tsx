@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { RotateNowButton, SeedDemoButton } from "../../components/action-buttons";
 import { StatusBadge } from "../../components/status-badge";
 import { api } from "../../lib/api";
@@ -30,12 +31,17 @@ export default async function IntegrationsPage() {
               <th className="px-4 py-3">Last Rotation</th>
               <th className="px-4 py-3">Next Rotation</th>
               <th className="px-4 py-3">Action</th>
+              <th className="px-4 py-3">Details</th>
             </tr>
           </thead>
           <tbody>
             {integrations.map((item) => (
               <tr key={item.id}>
-                <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
+                <td className="px-4 py-3 font-medium text-slate-900">
+                  <Link href={`/integrations/${item.id}`} className="hover:text-slateBlue hover:underline">
+                    {item.name}
+                  </Link>
+                </td>
                 <td className="px-4 py-3 capitalize">{item.provider}</td>
                 <td className="px-4 py-3">
                   <StatusBadge
@@ -50,6 +56,14 @@ export default async function IntegrationsPage() {
                 <td className="px-4 py-3">{item.policy?.nextRunAt ? new Date(item.policy.nextRunAt).toLocaleString() : "-"}</td>
                 <td className="px-4 py-3">
                   <RotateNowButton integrationId={item.id} />
+                </td>
+                <td className="px-4 py-3">
+                  <Link
+                    href={`/integrations/${item.id}`}
+                    className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slateBlue hover:text-slateBlue"
+                  >
+                    View
+                  </Link>
                 </td>
               </tr>
             ))}

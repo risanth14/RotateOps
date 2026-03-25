@@ -63,10 +63,15 @@ integrationsRouter.post(
     return res.status(404).json({ error: "Integration not found." });
   }
 
+  const actor = (req.headers["x-actor"] as string) || null;
+  const consentGrantId = (req.body as { consentGrantId?: string }).consentGrantId || null;
+
   const job = await createRotationJob({
     integrationId: integration.id,
     policyId: integration.policy?.id ?? null,
-    triggeredBy: "manual"
+    triggeredBy: "manual",
+    actor,
+    consentGrantId
   });
 
   void runRotationJob(job.id);

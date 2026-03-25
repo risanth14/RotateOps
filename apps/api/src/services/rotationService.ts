@@ -13,6 +13,8 @@ export async function createRotationJob(input: {
   integrationId: string;
   policyId?: string | null;
   triggeredBy: TriggerSource;
+  actor?: string | null;
+  consentGrantId?: string | null;
 }) {
   const integration = await prisma.integration.findUnique({
     where: { id: input.integrationId }
@@ -27,6 +29,8 @@ export async function createRotationJob(input: {
       integrationId: integration.id,
       policyId: input.policyId ?? null,
       triggeredBy: input.triggeredBy,
+      actor: input.actor ?? null,
+      consentGrantId: input.consentGrantId ?? null,
       status: "pending"
     }
   });
@@ -62,6 +66,12 @@ export async function runRotationJob(jobId: string): Promise<void> {
     mode
   } as const;
 
+  // Audit context carried from the job for every event in this pipeline run
+  const auditCtx = {
+    actor: job.actor ?? null,
+    consentGrantId: job.consentGrantId ?? null
+  };
+
   await prisma.rotationJob.update({
     where: { id: job.id },
     data: {
@@ -76,6 +86,7 @@ export async function runRotationJob(jobId: string): Promise<void> {
     integrationId: job.integrationId,
     eventType: "rotation_started",
     message: `Rotation started for ${job.integration.name}.`,
+    ...auditCtx,
     metadata: {
       provider: job.integration.provider,
       mode
@@ -96,6 +107,7 @@ export async function runRotationJob(jobId: string): Promise<void> {
       integrationId: job.integrationId,
       eventType: "credential_issued",
       message: "New credential issued.",
+      ...auditCtx,
       metadata: {
         fingerprint: nextSecret.fingerprint,
         maskedReference: nextSecret.maskedReference
@@ -108,6 +120,7 @@ export async function runRotationJob(jobId: string): Promise<void> {
       integrationId: job.integrationId,
       eventType: propagation.ok ? "propagation_succeeded" : "propagation_failed",
       message: propagation.ok ? "Credential propagation completed." : "Credential propagation failed.",
+      ...auditCtx,
       metadata: {
         targets: propagation.targets
       }
@@ -119,7 +132,8 @@ export async function runRotationJob(jobId: string): Promise<void> {
         jobId: job.id,
         integrationId: job.integrationId,
         eventType: "rollback_performed",
-        message: "Rollback completed due to propagation failure."
+        message: "Rollback completed due to propagation failure.",
+        ...auditCtx
       });
       finalStatus = "manual_intervention";
       failureReason = "Propagation failed. Manual intervention required.";
@@ -131,7 +145,8 @@ export async function runRotationJob(jobId: string): Promise<void> {
       jobId: job.id,
       integrationId: job.integrationId,
       eventType: verification.ok ? "verification_succeeded" : "verification_failed",
-      message: verification.detail
+      message: verification.detail,
+      ...auditCtx
     });
 
     if (!verification.ok) {
@@ -140,7 +155,8 @@ export async function runRotationJob(jobId: string): Promise<void> {
         jobId: job.id,
         integrationId: job.integrationId,
         eventType: "rollback_performed",
-        message: "Rollback completed due to failed verification."
+        message: "Rollback completed due to failed verification.",
+        ...auditCtx
       });
       finalStatus = "manual_intervention";
       failureReason = "Verification failed. Old credential was preserved.";
@@ -153,6 +169,7 @@ export async function runRotationJob(jobId: string): Promise<void> {
       integrationId: job.integrationId,
       eventType: "old_credential_revoked",
       message: "Old credential revoked after verification succeeded.",
+      ...auditCtx,
       metadata: {
         oldFingerprint: job.integration.secretFingerprint
       }
@@ -185,7 +202,8 @@ export async function runRotationJob(jobId: string): Promise<void> {
       jobId: job.id,
       integrationId: job.integrationId,
       eventType: "job_completed",
-      message: "Rotation completed successfully."
+      message: "Rotation completed successfully.",
+      ...auditCtx
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : "Unknown error";
@@ -197,6 +215,7 @@ export async function runRotationJob(jobId: string): Promise<void> {
       integrationId: job.integrationId,
       eventType: "job_failed",
       message: "Rotation failed.",
+      ...auditCtx,
       metadata: {
         reason: failureReason
       }

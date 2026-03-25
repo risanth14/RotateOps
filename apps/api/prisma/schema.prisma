@@ -49,6 +49,7 @@ model Integration {
   jobs               RotationJob[]
   auditEvents        AuditEvent[]
   secretTargets      SecretTarget[]
+  consentGrants      ConsentGrant[]
 }
 
 model RotationPolicy {
@@ -68,6 +69,8 @@ model RotationJob {
   integrationId     String
   policyId          String?
   triggeredBy       String
+  actor             String?
+  consentGrantId    String?
   status            JobStatus   @default(pending)
   startedAt         DateTime?
   completedAt       DateTime?
@@ -80,6 +83,7 @@ model RotationJob {
   updatedAt         DateTime    @updatedAt
   integration       Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
   policy            RotationPolicy? @relation(fields: [policyId], references: [id], onDelete: SetNull)
+  consentGrant      ConsentGrant? @relation(fields: [consentGrantId], references: [id], onDelete: SetNull)
   auditEvents       AuditEvent[]
 
   @@index([integrationId, createdAt])
@@ -87,15 +91,18 @@ model RotationJob {
 }
 
 model AuditEvent {
-  id            String      @id @default(cuid())
-  jobId         String
-  integrationId String
-  eventType     String
-  message       String
-  metadata      Json?
-  createdAt     DateTime    @default(now())
-  job           RotationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  id             String        @id @default(cuid())
+  jobId          String?
+  integrationId  String
+  eventType      String
+  message        String
+  actor          String?
+  consentGrantId String?
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+  job            RotationJob?  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  integration    Integration   @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  consentGrant   ConsentGrant? @relation(fields: [consentGrantId], references: [id], onDelete: SetNull)
 
   @@index([integrationId, createdAt])
   @@index([jobId, createdAt])
@@ -110,4 +117,22 @@ model SecretTarget {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+}
+
+model ConsentGrant {
+  id            String      @id @default(cuid())
+  integrationId String
+  provider      Provider
+  scopes        String[]
+  grantedBy     String
+  expiresAt     DateTime?
+  revokedAt     DateTime?
+  callbackState String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  auditEvents   AuditEvent[]
+  jobs          RotationJob[]
+
+  @@index([integrationId])
 }

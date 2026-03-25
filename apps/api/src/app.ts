@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import { env } from "./config/env.js";
 import { auditEventsRouter } from "./routes/auditEvents.js";
+import { consentRouter } from "./routes/consent.js";
 import { integrationsRouter } from "./routes/integrations.js";
 import { jobsRouter } from "./routes/jobs.js";
 import { policiesRouter } from "./routes/policies.js";
@@ -24,6 +25,7 @@ export function buildApp() {
   });
 
   app.use("/integrations", integrationsRouter);
+  app.use("/integrations/:id/consent", consentRouter);
   app.use("/policies", policiesRouter);
   app.use("/jobs", jobsRouter);
   app.use("/audit-events", auditEventsRouter);
