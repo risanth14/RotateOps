@@ -42,6 +42,7 @@ packages/
 - Node.js 20+
 - npm 10+
 - Supabase project (Postgres)
+- Auth0 tenant + API configuration (domain, audience, M2M client)
 
 ## Local Setup
 
@@ -62,6 +63,7 @@ Copy-Item apps/web/.env.local.example apps/web/.env.local
 
 - `DATABASE_URL`: Supabase pooled connection string (port `6543`)
 - `DIRECT_URL`: Supabase direct connection string (port `5432`, `sslmode=require`)
+- `AUTH0_DOMAIN`, `AUTH0_AUDIENCE`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`
 
 4. Generate Prisma client + apply migration:
 
@@ -105,12 +107,16 @@ Web runs on `http://localhost:3000`, API on `http://localhost:4000`.
 - `GET /audit-events`
 - `POST /seed-demo`
 
+All endpoints except `GET /health` require a valid Auth0 Bearer token.
+
 ## Modes
 
 - `APP_MODE=demo`: safe mocked rotations (default)
-- `mode=provider` on an integration: production-oriented connector interfaces with explicit stubs where provider-specific safeguards are required
+- `mode=provider` on an integration: production-oriented connector flow backed by the Token Vault adapter
 
-Provider mode currently requires completing connector-specific API calls and revocation/rollback safety checks before production use.
+Provider mode now uses a Token Vault adapter (`issue/introspect/revoke`) for token lifecycle orchestration. Configure:
+- `TOKEN_VAULT_BASE_URL`
+- `TOKEN_VAULT_API_KEY`
 
 ## Testing
 

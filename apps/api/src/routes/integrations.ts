@@ -3,6 +3,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { asyncHandler } from "../lib/asyncHandler.js";
 import { prisma } from "../lib/prisma.js";
+import { requireAuth } from "../middleware/auth.js";
 import { createRotationJob, runRotationJob } from "../services/rotationService.js";
 
 const createSchema = z.object({
@@ -17,8 +18,12 @@ export const integrationsRouter = Router();
 
 integrationsRouter.get(
   "/",
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
+  const auth = requireAuth(req);
   const items = await prisma.integration.findMany({
+    where: {
+      organizationId: auth.organizationId
+    },
     include: {
       policy: true
     },
@@ -32,6 +37,7 @@ integrationsRouter.get(
 integrationsRouter.post(
   "/",
   asyncHandler(async (req, res) => {
+  const auth = requireAuth(req);
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
@@ -39,6 +45,8 @@ integrationsRouter.post(
 
   const created = await prisma.integration.create({
     data: {
+      organizationId: auth.organizationId,
+      createdByUserId: auth.userId,
       provider: parsed.data.provider,
       name: parsed.data.name,
       mode: parsed.data.mode,
@@ -54,8 +62,12 @@ integrationsRouter.post(
 integrationsRouter.post(
   "/:id/rotate-now",
   asyncHandler(async (req, res) => {
-  const integration = await prisma.integration.findUnique({
-    where: { id: req.params.id },
+  const auth = requireAuth(req);
+  const integration = await prisma.integration.findFirst({
+    where: {
+      id: req.params.id,
+      organizationId: auth.organizationId
+    },
     include: { policy: true }
   });
 
@@ -69,9 +81,7 @@ integrationsRouter.post(
   const job = await createRotationJob({
     integrationId: integration.id,
     policyId: integration.policy?.id ?? null,
-    triggeredBy: "manual",
-    actor,
-    consentGrantId
+    triggeredBy: "manual"
   });
 
   void runRotationJob(job.id);

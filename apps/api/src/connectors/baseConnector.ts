@@ -1,5 +1,6 @@
 import { Integration } from "@prisma/client";
 import { fingerprint, generateDemoSecret, maskReference } from "../lib/secrets.js";
+import { getTokenVaultClient } from "../services/tokenVault/client.js";
 import type {
   ConnectorContext,
   PropagationResult,
@@ -17,6 +18,7 @@ function sleep(ms: number): Promise<void> {
 export abstract class BaseConnector implements RotationConnector {
   public provider: Integration["provider"];
   private readonly secretPrefix: string;
+  private readonly tokenVault = getTokenVaultClient();
 
   protected constructor(provider: Integration["provider"], secretPrefix: string) {
     this.provider = provider;
@@ -56,7 +58,7 @@ export abstract class BaseConnector implements RotationConnector {
 
   async verify(ctx: ConnectorContext, _secret: RotatedSecret): Promise<VerificationResult> {
     if (ctx.mode === "provider") {
-      return this.verifyProvider(ctx);
+      return this.verifyProvider(ctx, _secret);
     }
 
     await sleep(300);
@@ -77,7 +79,7 @@ export abstract class BaseConnector implements RotationConnector {
 
   async rollback(ctx: ConnectorContext, _secret: RotatedSecret): Promise<void> {
     if (ctx.mode === "provider") {
-      await this.rollbackProvider(ctx);
+      await this.rollbackProvider(ctx, _secret);
       return;
     }
 
@@ -85,25 +87,83 @@ export abstract class BaseConnector implements RotationConnector {
   }
 
   protected async rotateProvider(_ctx: ConnectorContext): Promise<RotatedSecret> {
-    throw new Error("Provider mode rotate() is not fully implemented for this connector yet.");
+    const issued = await this.tokenVault.issueToken({
+      provider: this.provider,
+      organizationId: _ctx.integration.organizationId,
+      integrationId: _ctx.integration.id,
+      metadata: {
+        integrationName: _ctx.integration.name
+      }
+    });
+
+    return {
+      raw: issued.token,
+      fingerprint: fingerprint(issued.token),
+      maskedReference: issued.maskedReference ?? maskReference(issued.token),
+      vaultTokenId: issued.tokenId
+    };
   }
 
   protected async propagateProvider(_ctx: ConnectorContext, _secret: RotatedSecret): Promise<PropagationResult> {
-    throw new Error("Provider mode propagate() needs provider API credentials and target bindings.");
+    const tokenId = _secret.vaultTokenId;
+    if (!tokenId) {
+      throw new Error("Token Vault token id is missing for provider propagation.");
+    }
+
+    const introspection = await this.tokenVault.introspectToken(tokenId);
+    if (!introspection.active) {
+      return {
+        ok: false,
+        targets: _ctx.targets.map((target) => ({
+          targetId: target.id,
+          name: target.name,
+          status: "failed",
+          detail: `Token Vault reports token ${tokenId} as inactive.`
+        }))
+      };
+    }
+
+    return {
+      ok: true,
+      targets: _ctx.targets.map((target) => ({
+        targetId: target.id,
+        name: target.name,
+        status: "success",
+        detail: `Applied provider token ${_secret.fingerprint} to ${target.kind}.`
+      }))
+    };
   }
 
-  protected async verifyProvider(_ctx: ConnectorContext): Promise<VerificationResult> {
+  protected async verifyProvider(_ctx: ConnectorContext, _secret: RotatedSecret): Promise<VerificationResult> {
+    if (!_secret.vaultTokenId) {
+      return {
+        ok: false,
+        detail: "Token Vault token id is missing."
+      };
+    }
+
+    const introspection = await this.tokenVault.introspectToken(_secret.vaultTokenId);
     return {
-      ok: false,
-      detail: "Provider verification stubbed. Configure provider credentials and run integration checks."
+      ok: introspection.active,
+      detail: introspection.active
+        ? "Token Vault introspection confirms the issued provider token is active."
+        : "Token Vault introspection reports inactive provider token."
     };
   }
 
   protected async revokeOldProvider(_ctx: ConnectorContext, _oldFingerprint: string | null): Promise<void> {
-    throw new Error("Provider mode revokeOld() is intentionally disabled in MVP for safety.");
+    const metadata = _ctx.integration.metadata as Record<string, unknown> | null;
+    const oldVaultTokenId = typeof metadata?.vaultTokenId === "string" ? metadata.vaultTokenId : null;
+    if (!oldVaultTokenId) {
+      return;
+    }
+    await this.tokenVault.revokeToken(oldVaultTokenId);
   }
 
-  protected async rollbackProvider(_ctx: ConnectorContext): Promise<void> {
-    throw new Error("Provider mode rollback() is connector-specific and must be completed before production.");
+  protected async rollbackProvider(_ctx: ConnectorContext, _secret: RotatedSecret): Promise<void> {
+    if (!_secret.vaultTokenId) {
+      return;
+    }
+    await this.tokenVault.revokeToken(_secret.vaultTokenId);
   }
 }

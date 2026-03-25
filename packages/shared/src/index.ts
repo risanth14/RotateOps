@@ -19,6 +19,7 @@ export interface SecretTargetShape {
 
 export interface IntegrationShape {
   id: string;
+  organizationId: string;
   name: string;
   provider: Provider;
   mode: IntegrationMode;

@@ -4,6 +4,7 @@ export interface RotatedSecret {
   raw: string;
   fingerprint: string;
   maskedReference: string;
+  vaultTokenId?: string;
 }
 
 export interface PropagationResult {

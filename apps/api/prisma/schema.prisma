@@ -33,8 +33,51 @@ enum JobStatus {
   manual_intervention
 }
 
+enum MembershipRole {
+  owner
+  admin
+  member
+}
+
+model Organization {
+  id            String                   @id @default(cuid())
+  auth0OrgId    String                   @unique
+  name          String?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  memberships   OrganizationMembership[]
+  integrations  Integration[]
+}
+
+model User {
+  id            String                   @id @default(cuid())
+  auth0UserId   String                   @unique
+  email         String?
+  name          String?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  memberships   OrganizationMembership[]
+  integrations  Integration[]
+}
+
+model OrganizationMembership {
+  id              String         @id @default(cuid())
+  organizationId  String
+  userId          String
+  role            MembershipRole @default(member)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId, createdAt])
+}
+
 model Integration {
   id                 String            @id @default(cuid())
+  organizationId     String
+  createdByUserId    String?
   provider           Provider
   name               String
   mode               IntegrationMode   @default(demo)
@@ -45,11 +88,12 @@ model Integration {
   lastRotatedAt      DateTime?
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
+  organization       Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdByUser      User?             @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
   policy             RotationPolicy?
   jobs               RotationJob[]
   auditEvents        AuditEvent[]
   secretTargets      SecretTarget[]
-  consentGrants      ConsentGrant[]
 }
 
 model RotationPolicy {

@@ -40,7 +40,8 @@ export function startScheduler(): void {
         const job = await createRotationJob({
           integrationId: policy.integrationId,
           policyId: policy.id,
-          triggeredBy: "scheduler"
+          triggeredBy: "scheduler",
+          organizationId: policy.integration.organizationId
         });
 
         void runRotationJob(job.id);

@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import { Router } from "express";
 import { asyncHandler } from "../lib/asyncHandler.js";
 import { prisma } from "../lib/prisma.js";
+import { requireAuth } from "../middleware/auth.js";
 
 export const seedDemoRouter = Router();
 
@@ -25,10 +26,12 @@ const demoIntegrations = [
 
 seedDemoRouter.post(
   "/",
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
+  const auth = requireAuth(req);
   for (const item of demoIntegrations) {
     const existing = await prisma.integration.findFirst({
       where: {
+        organizationId: auth.organizationId,
         name: item.name
       }
     });
@@ -39,6 +42,8 @@ seedDemoRouter.post(
 
     const integration = await prisma.integration.create({
       data: {
+        organizationId: auth.organizationId,
+        createdByUserId: auth.userId,
         provider: item.provider,
         name: item.name,
         mode: "demo",
@@ -81,9 +86,21 @@ seedDemoRouter.post(
   }
 
   const counts = await Promise.all([
-    prisma.integration.count(),
-    prisma.rotationPolicy.count(),
-    prisma.secretTarget.count()
+    prisma.integration.count({ where: { organizationId: auth.organizationId } }),
+    prisma.rotationPolicy.count({
+      where: {
+        integration: {
+          organizationId: auth.organizationId
+        }
+      }
+    }),
+    prisma.secretTarget.count({
+      where: {
+        integration: {
+          organizationId: auth.organizationId
+        }
+      }
+    })
   ]);
 
   return res.json({

@@ -13,11 +13,12 @@ export async function createRotationJob(input: {
   integrationId: string;
   policyId?: string | null;
   triggeredBy: TriggerSource;
-  actor?: string | null;
-  consentGrantId?: string | null;
 }) {
-  const integration = await prisma.integration.findUnique({
-    where: { id: input.integrationId }
+  const integration = await prisma.integration.findFirst({
+    where: {
+      id: input.integrationId,
+      organizationId: input.organizationId
+    }
   });
 
   if (!integration) {
@@ -110,7 +111,8 @@ export async function runRotationJob(jobId: string): Promise<void> {
       ...auditCtx,
       metadata: {
         fingerprint: nextSecret.fingerprint,
-        maskedReference: nextSecret.maskedReference
+        maskedReference: nextSecret.maskedReference,
+        vaultTokenId: nextSecret.vaultTokenId ?? null
       }
     });
 
@@ -181,6 +183,10 @@ export async function runRotationJob(jobId: string): Promise<void> {
         // Store only masked reference + fingerprint in MVP. Raw secrets should live in a secure vault.
         secretFingerprint: nextSecret.fingerprint,
         maskedReference: nextSecret.maskedReference,
+        metadata: {
+          ...(job.integration.metadata as Record<string, unknown> | null),
+          vaultTokenId: nextSecret.vaultTokenId ?? null
+        },
         lastRotatedAt: new Date(),
         status: "active"
       }

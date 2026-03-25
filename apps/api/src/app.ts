@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 import { env } from "./config/env.js";
+import { UnauthorizedError, authMiddleware } from "./middleware/auth.js";
 import { auditEventsRouter } from "./routes/auditEvents.js";
 import { consentRouter } from "./routes/consent.js";
 import { integrationsRouter } from "./routes/integrations.js";
@@ -24,6 +25,7 @@ export function buildApp() {
     res.json({ ok: true, mode: env.APP_MODE, now: new Date().toISOString() });
   });
 
+  app.use(authMiddleware);
   app.use("/integrations", integrationsRouter);
   app.use("/integrations/:id/consent", consentRouter);
   app.use("/policies", policiesRouter);
@@ -32,6 +34,10 @@ export function buildApp() {
   app.use("/seed-demo", seedDemoRouter);
 
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (err instanceof UnauthorizedError) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
     const message = err instanceof Error ? err.message : "Unexpected server error";
     res.status(500).json({ error: message });
   });
