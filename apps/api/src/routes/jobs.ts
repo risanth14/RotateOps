@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { asyncHandler } from "../lib/asyncHandler.js";
 import { prisma } from "../lib/prisma.js";
+import { requireAuth } from "../middleware/auth.js";
 import { createRotationJob, runRotationJob } from "../services/rotationService.js";
 
 const createSchema = z.object({
@@ -14,8 +15,14 @@ export const jobsRouter = Router();
 
 jobsRouter.get(
   "/",
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
+  const auth = requireAuth(req);
   const jobs = await prisma.rotationJob.findMany({
+    where: {
+      integration: {
+        organizationId: auth.organizationId
+      }
+    },
     include: {
       integration: true
     },
@@ -30,12 +37,29 @@ jobsRouter.get(
 jobsRouter.post(
   "/",
   asyncHandler(async (req, res) => {
+  const auth = requireAuth(req);
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
   }
 
-  const job = await createRotationJob(parsed.data);
+  const integration = await prisma.integration.findFirst({
+    where: {
+      id: parsed.data.integrationId,
+      organizationId: auth.organizationId
+    }
+  });
+
+  if (!integration) {
+    return res.status(404).json({ error: "Integration not found." });
+  }
+
+  const job = await createRotationJob({
+    integrationId: parsed.data.integrationId,
+    policyId: parsed.data.policyId,
+    triggeredBy: parsed.data.triggeredBy,
+    organizationId: auth.organizationId
+  });
   return res.status(201).json(job);
   })
 );
@@ -43,8 +67,14 @@ jobsRouter.post(
 jobsRouter.post(
   "/:id/run",
   asyncHandler(async (req, res) => {
-  const job = await prisma.rotationJob.findUnique({
-    where: { id: req.params.id }
+  const auth = requireAuth(req);
+  const job = await prisma.rotationJob.findFirst({
+    where: {
+      id: req.params.id,
+      integration: {
+        organizationId: auth.organizationId
+      }
+    }
   });
 
   if (!job) {
@@ -59,8 +89,14 @@ jobsRouter.post(
 jobsRouter.get(
   "/:id",
   asyncHandler(async (req, res) => {
-  const job = await prisma.rotationJob.findUnique({
-    where: { id: req.params.id },
+  const auth = requireAuth(req);
+  const job = await prisma.rotationJob.findFirst({
+    where: {
+      id: req.params.id,
+      integration: {
+        organizationId: auth.organizationId
+      }
+    },
     include: {
       integration: true,
       auditEvents: {
