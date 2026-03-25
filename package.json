@@ -1,0 +1,22 @@
+{
+  "name": "rotateops",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @rotateops/api",
+    "dev:all": "concurrently \"npm run dev --workspace @rotateops/api\" \"npm run dev --workspace @rotateops/web\"",
+    "build": "npm run build --workspace @rotateops/shared && npm run build --workspace @rotateops/api && npm run build --workspace @rotateops/web",
+    "test": "npm run test --workspace @rotateops/api",
+    "prisma:generate": "npm run prisma:generate --workspace @rotateops/api",
+    "prisma:migrate": "npm run prisma:migrate --workspace @rotateops/api",
+    "seed": "npm run seed --workspace @rotateops/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.8.2"
+  }
+}

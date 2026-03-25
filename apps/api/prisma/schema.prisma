@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Provider {
+  github
+  vercel
+  stripe
+}
+
+enum IntegrationMode {
+  demo
+  provider
+}
+
+enum IntegrationStatus {
+  active
+  paused
+  error
+}
+
+enum JobStatus {
+  pending
+  running
+  success
+  failed
+  manual_intervention
+}
+
+model Integration {
+  id                 String            @id @default(cuid())
+  provider           Provider
+  name               String
+  mode               IntegrationMode   @default(demo)
+  status             IntegrationStatus @default(active)
+  metadata           Json?
+  secretFingerprint  String?
+  maskedReference    String?
+  lastRotatedAt      DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  policy             RotationPolicy?
+  jobs               RotationJob[]
+  auditEvents        AuditEvent[]
+  secretTargets      SecretTarget[]
+}
+
+model RotationPolicy {
+  id             String      @id @default(cuid())
+  integrationId  String      @unique
+  intervalDays   Int
+  enabled        Boolean     @default(true)
+  nextRunAt      DateTime
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  integration    Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  jobs           RotationJob[]
+}
+
+model RotationJob {
+  id                String      @id @default(cuid())
+  integrationId     String
+  policyId          String?
+  triggeredBy       String
+  status            JobStatus   @default(pending)
+  startedAt         DateTime?
+  completedAt       DateTime?
+  failureReason     String?
+  aiSummary         String?
+  oldFingerprint    String?
+  newFingerprint    String?
+  rollbackPerformed Boolean     @default(false)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  integration       Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  policy            RotationPolicy? @relation(fields: [policyId], references: [id], onDelete: SetNull)
+  auditEvents       AuditEvent[]
+
+  @@index([integrationId, createdAt])
+  @@index([status, createdAt])
+}
+
+model AuditEvent {
+  id            String      @id @default(cuid())
+  jobId         String
+  integrationId String
+  eventType     String
+  message       String
+  metadata      Json?
+  createdAt     DateTime    @default(now())
+  job           RotationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId, createdAt])
+  @@index([jobId, createdAt])
+}
+
+model SecretTarget {
+  id            String      @id @default(cuid())
+  integrationId String
+  name          String
+  kind          String
+  config        Json
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+}
