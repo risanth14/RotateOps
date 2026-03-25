@@ -18,6 +18,7 @@ export function PolicyIntervalForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [intervalDays, setIntervalDays] = useState<number>(currentInterval);
+  const [error, setError] = useState<string | null>(null);
   const hasChanged = intervalDays !== currentInterval;
 
   return (
@@ -39,18 +40,30 @@ export function PolicyIntervalForm({
         disabled={isPending || !hasChanged}
         onClick={() => {
           startTransition(async () => {
-            await fetch(`${API_BASE}/policies`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ integrationId, intervalDays, enabled })
-            });
-            router.refresh();
+            setError(null);
+            try {
+              const response = await fetch(`${API_BASE}/policies`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ integrationId, intervalDays, enabled })
+              });
+
+              if (!response.ok) {
+                throw new Error(`API error (${response.status})`);
+              }
+
+              router.refresh();
+            } catch (err) {
+              const message = err instanceof Error ? err.message : "Request failed";
+              setError(message);
+            }
           });
         }}
         className="rounded-lg bg-slateBlue px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:-translate-y-px hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isPending ? "Saving..." : "Save"}
       </button>
+      {error ? <p className="text-xs text-rose-600">{error}</p> : null}
     </div>
   );
 }

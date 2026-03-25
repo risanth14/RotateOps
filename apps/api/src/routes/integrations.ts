@@ -1,6 +1,7 @@
 import { IntegrationMode, IntegrationStatus, Provider } from "@prisma/client";
 import { Router } from "express";
 import { z } from "zod";
+import { asyncHandler } from "../lib/asyncHandler.js";
 import { prisma } from "../lib/prisma.js";
 import { createRotationJob, runRotationJob } from "../services/rotationService.js";
 
@@ -14,7 +15,9 @@ const createSchema = z.object({
 
 export const integrationsRouter = Router();
 
-integrationsRouter.get("/", async (_req, res) => {
+integrationsRouter.get(
+  "/",
+  asyncHandler(async (_req, res) => {
   const items = await prisma.integration.findMany({
     include: {
       policy: true
@@ -23,9 +26,12 @@ integrationsRouter.get("/", async (_req, res) => {
   });
 
   res.json(items);
-});
+  })
+);
 
-integrationsRouter.post("/", async (req, res) => {
+integrationsRouter.post(
+  "/",
+  asyncHandler(async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
@@ -42,9 +48,12 @@ integrationsRouter.post("/", async (req, res) => {
   });
 
   return res.status(201).json(created);
-});
+  })
+);
 
-integrationsRouter.post("/:id/rotate-now", async (req, res) => {
+integrationsRouter.post(
+  "/:id/rotate-now",
+  asyncHandler(async (req, res) => {
   const integration = await prisma.integration.findUnique({
     where: { id: req.params.id },
     include: { policy: true }
@@ -63,4 +72,5 @@ integrationsRouter.post("/:id/rotate-now", async (req, res) => {
   void runRotationJob(job.id);
 
   return res.status(202).json(job);
-});
+  })
+);

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { asyncHandler } from "../lib/asyncHandler.js";
 import { prisma } from "../lib/prisma.js";
 import { createRotationJob, runRotationJob } from "../services/rotationService.js";
 
@@ -11,7 +12,9 @@ const createSchema = z.object({
 
 export const jobsRouter = Router();
 
-jobsRouter.get("/", async (_req, res) => {
+jobsRouter.get(
+  "/",
+  asyncHandler(async (_req, res) => {
   const jobs = await prisma.rotationJob.findMany({
     include: {
       integration: true
@@ -21,9 +24,12 @@ jobsRouter.get("/", async (_req, res) => {
   });
 
   res.json(jobs);
-});
+  })
+);
 
-jobsRouter.post("/", async (req, res) => {
+jobsRouter.post(
+  "/",
+  asyncHandler(async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
@@ -31,9 +37,12 @@ jobsRouter.post("/", async (req, res) => {
 
   const job = await createRotationJob(parsed.data);
   return res.status(201).json(job);
-});
+  })
+);
 
-jobsRouter.post("/:id/run", async (req, res) => {
+jobsRouter.post(
+  "/:id/run",
+  asyncHandler(async (req, res) => {
   const job = await prisma.rotationJob.findUnique({
     where: { id: req.params.id }
   });
@@ -44,9 +53,12 @@ jobsRouter.post("/:id/run", async (req, res) => {
 
   void runRotationJob(job.id);
   return res.status(202).json({ ok: true, jobId: job.id });
-});
+  })
+);
 
-jobsRouter.get("/:id", async (req, res) => {
+jobsRouter.get(
+  "/:id",
+  asyncHandler(async (req, res) => {
   const job = await prisma.rotationJob.findUnique({
     where: { id: req.params.id },
     include: {
@@ -62,4 +74,5 @@ jobsRouter.get("/:id", async (req, res) => {
   }
 
   return res.json(job);
-});
+  })
+);

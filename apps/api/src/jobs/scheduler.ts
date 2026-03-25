@@ -11,38 +11,43 @@ export function startScheduler(): void {
   started = true;
 
   cron.schedule("*/1 * * * *", async () => {
-    const duePolicies = await prisma.rotationPolicy.findMany({
-      where: {
-        enabled: true,
-        nextRunAt: { lte: new Date() },
-        integration: {
-          status: "active"
-        }
-      },
-      include: {
-        integration: true
-      }
-    });
-
-    for (const policy of duePolicies) {
-      const existing = await prisma.rotationJob.findFirst({
+    try {
+      const duePolicies = await prisma.rotationPolicy.findMany({
         where: {
-          integrationId: policy.integrationId,
-          status: { in: ["pending", "running"] }
+          enabled: true,
+          nextRunAt: { lte: new Date() },
+          integration: {
+            status: "active"
+          }
+        },
+        include: {
+          integration: true
         }
       });
 
-      if (existing) {
-        continue;
+      for (const policy of duePolicies) {
+        const existing = await prisma.rotationJob.findFirst({
+          where: {
+            integrationId: policy.integrationId,
+            status: { in: ["pending", "running"] }
+          }
+        });
+
+        if (existing) {
+          continue;
+        }
+
+        const job = await createRotationJob({
+          integrationId: policy.integrationId,
+          policyId: policy.id,
+          triggeredBy: "scheduler"
+        });
+
+        void runRotationJob(job.id);
       }
-
-      const job = await createRotationJob({
-        integrationId: policy.integrationId,
-        policyId: policy.id,
-        triggeredBy: "scheduler"
-      });
-
-      void runRotationJob(job.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown scheduler error";
+      console.error("[scheduler] tick failed:", message);
     }
   });
 }

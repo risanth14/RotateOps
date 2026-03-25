@@ -9,7 +9,14 @@ import { seedDemoRouter } from "./routes/seedDemo.js";
 
 export function buildApp() {
   const app = express();
-  app.use(cors({ origin: [env.WEB_BASE_URL], credentials: false }));
+  app.use(
+    cors({
+      // In development, Next may run on a fallback port (3001/3002/...) if 3000 is busy.
+      // Keep production strict while allowing local multi-port workflows.
+      origin: env.NODE_ENV === "production" ? [env.WEB_BASE_URL] : true,
+      credentials: false
+    })
+  );
   app.use(express.json());
 
   app.get("/health", (_req, res) => {

@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { Router } from "express";
+import { asyncHandler } from "../lib/asyncHandler.js";
 import { prisma } from "../lib/prisma.js";
 
 export const seedDemoRouter = Router();
@@ -22,7 +23,9 @@ const demoIntegrations = [
   }
 ];
 
-seedDemoRouter.post("/", async (_req, res) => {
+seedDemoRouter.post(
+  "/",
+  asyncHandler(async (_req, res) => {
   for (const item of demoIntegrations) {
     const existing = await prisma.integration.findFirst({
       where: {
@@ -89,4 +92,5 @@ seedDemoRouter.post("/", async (_req, res) => {
     policies: counts[1],
     targets: counts[2]
   });
-});
+  })
+);

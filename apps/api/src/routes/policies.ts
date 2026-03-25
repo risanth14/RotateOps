@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { Router } from "express";
 import { z } from "zod";
+import { asyncHandler } from "../lib/asyncHandler.js";
 import { prisma } from "../lib/prisma.js";
 
 const createSchema = z.object({
@@ -11,7 +12,9 @@ const createSchema = z.object({
 
 export const policiesRouter = Router();
 
-policiesRouter.get("/", async (_req, res) => {
+policiesRouter.get(
+  "/",
+  asyncHandler(async (_req, res) => {
   const items = await prisma.rotationPolicy.findMany({
     include: {
       integration: true
@@ -20,9 +23,12 @@ policiesRouter.get("/", async (_req, res) => {
   });
 
   res.json(items);
-});
+  })
+);
 
-policiesRouter.post("/", async (req, res) => {
+policiesRouter.post(
+  "/",
+  asyncHandler(async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
@@ -52,4 +58,5 @@ policiesRouter.post("/", async (req, res) => {
   });
 
   return res.status(201).json(upserted);
-});
+  })
+);
