@@ -18,7 +18,7 @@ export function RotateNowButton({ integrationId }: { integrationId: string }) {
           router.refresh();
         });
       }}
-      className="rounded-lg bg-slateBlue px-3 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60"
+      className="rounded-lg bg-slateBlue px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:-translate-y-px hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {isPending ? "Starting..." : "Rotate Now"}
     </button>
@@ -38,7 +38,7 @@ export function SeedDemoButton() {
           router.refresh();
         });
       }}
-      className="rounded-lg bg-sunrise px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+      className="rounded-lg bg-sunrise px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-px hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {isPending ? "Seeding..." : "Seed Demo Integrations"}
     </button>

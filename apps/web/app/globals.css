@@ -4,12 +4,56 @@
 
 :root {
   color-scheme: light;
+  --bg-start: #edf7ff;
+  --bg-mid: #f9fbff;
+  --bg-end: #fff4db;
+  --surface: #ffffffcc;
+  --surface-border: #e2e8f0;
+  --text-main: #0f172a;
+  --text-muted: #475569;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at top right, #dbeafe 0%, #f8fafc 45%, #fef3c7 100%);
-  color: #0f172a;
-  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  background: radial-gradient(circle at 100% 0%, var(--bg-start) 0%, var(--bg-mid) 48%, var(--bg-end) 100%);
+  color: var(--text-main);
+  font-family: var(--font-manrope), "Avenir Next", "Segoe UI", sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display), var(--font-manrope), sans-serif;
+  letter-spacing: -0.02em;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-2xl border border-slate-200/70 bg-white/75 shadow-sm backdrop-blur;
+  }
+
+  .data-table {
+    @apply min-w-full text-sm text-slate-700;
+  }
+
+  .data-table thead {
+    @apply bg-slate-100/80 text-left text-xs uppercase tracking-wide text-slate-600;
+  }
+
+  .data-table th {
+    @apply px-4 py-3 font-semibold;
+  }
+
+  .data-table td {
+    @apply px-4 py-3 align-top;
+  }
+
+  .data-table tbody tr {
+    @apply border-t border-slate-100 transition hover:bg-sky-50/45;
+  }
+
+  .subtext {
+    @apply text-sm text-slate-600;
+  }
 }

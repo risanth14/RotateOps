@@ -10,18 +10,18 @@ export default async function IntegrationsPage() {
   const integrations = await api.getIntegrations();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Integrations</h1>
-          <p className="text-sm text-slate-600">Connected providers and their credential health.</p>
+          <p className="subtext">Connected providers and their credential health.</p>
         </div>
         <SeedDemoButton />
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-100 text-left">
+      <div className="panel overflow-x-auto">
+        <table className="data-table">
+          <thead>
             <tr>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Provider</th>
@@ -34,8 +34,8 @@ export default async function IntegrationsPage() {
           </thead>
           <tbody>
             {integrations.map((item) => (
-              <tr key={item.id} className="border-t border-slate-100">
-                <td className="px-4 py-3">{item.name}</td>
+              <tr key={item.id}>
+                <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
                 <td className="px-4 py-3 capitalize">{item.provider}</td>
                 <td className="px-4 py-3">
                   <StatusBadge

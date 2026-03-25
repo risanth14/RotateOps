@@ -5,15 +5,15 @@ export default async function JobsPage() {
   const jobs = await api.getJobs();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-semibold">Rotation Jobs</h1>
-        <p className="text-sm text-slate-600">Execution history with verification and revocation outcomes.</p>
+        <p className="subtext">Execution history with verification and revocation outcomes.</p>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-100 text-left">
+      <div className="panel overflow-x-auto">
+        <table className="data-table">
+          <thead>
             <tr>
               <th className="px-4 py-3">Job ID</th>
               <th className="px-4 py-3">Integration</th>
@@ -26,9 +26,9 @@ export default async function JobsPage() {
           </thead>
           <tbody>
             {jobs.map((job) => (
-              <tr key={job.id} className="border-t border-slate-100">
+              <tr key={job.id}>
                 <td className="px-4 py-3 font-mono text-xs">{job.id.slice(0, 12)}</td>
-                <td className="px-4 py-3">{job.integration.name}</td>
+                <td className="px-4 py-3 font-medium text-slate-900">{job.integration.name}</td>
                 <td className="px-4 py-3">
                   <StatusBadge
                     label={job.status}

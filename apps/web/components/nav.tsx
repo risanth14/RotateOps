@@ -15,8 +15,16 @@ export function Navigation() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-full rounded-2xl bg-white/80 p-4 shadow-md shadow-slate-200 md:w-60">
-      <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">RotateOps</p>
+    <aside className="panel w-full p-4 md:sticky md:top-6 md:h-fit md:w-64">
+      <div className="mb-5 flex items-center gap-3">
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slateBlue text-sm font-bold text-white shadow-sm">
+          RO
+        </span>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">RotateOps</p>
+          <p className="text-xs text-slate-500">Security Console</p>
+        </div>
+      </div>
       <nav className="space-y-2">
         {links.map((link) => {
           const active = pathname.startsWith(link.href);
@@ -24,8 +32,10 @@ export function Navigation() {
             <Link
               key={link.href}
               href={link.href}
-              className={`block rounded-xl px-3 py-2 text-sm font-medium transition ${
-                active ? "bg-slateBlue text-white" : "text-slate-700 hover:bg-slate-100"
+              className={`block rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                active
+                  ? "bg-gradient-to-r from-slateBlue to-slate-700 text-white shadow-sm"
+                  : "text-slate-700 hover:bg-slate-100"
               }`}
             >
               {link.label}
