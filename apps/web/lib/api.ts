@@ -40,6 +40,7 @@ const mockIntegrations = [
 const mockPolicies = [
   {
     id: "pol-1",
+    integrationId: "demo-gh",
     integration: { name: "GitHub Actions PAT" },
     intervalDays: 30,
     enabled: true,
@@ -48,6 +49,7 @@ const mockPolicies = [
   },
   {
     id: "pol-2",
+    integrationId: "demo-vercel",
     integration: { name: "Vercel Deployment Token" },
     intervalDays: 60,
     enabled: true,

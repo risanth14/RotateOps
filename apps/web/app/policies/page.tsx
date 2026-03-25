@@ -1,4 +1,5 @@
 import { api } from "../../lib/api";
+import { PolicyIntervalForm } from "../../components/policy-interval-form";
 import { StatusBadge } from "../../components/status-badge";
 
 export default async function PoliciesPage() {
@@ -20,6 +21,7 @@ export default async function PoliciesPage() {
               <th className="px-4 py-3">Enabled</th>
               <th className="px-4 py-3">Next Run</th>
               <th className="px-4 py-3">Updated</th>
+              <th className="px-4 py-3">Change Interval</th>
             </tr>
           </thead>
           <tbody>
@@ -32,6 +34,13 @@ export default async function PoliciesPage() {
                 </td>
                 <td className="px-4 py-3">{new Date(policy.nextRunAt).toLocaleString()}</td>
                 <td className="px-4 py-3">{new Date(policy.updatedAt).toLocaleString()}</td>
+                <td className="px-4 py-3">
+                  <PolicyIntervalForm
+                    integrationId={policy.integrationId}
+                    currentInterval={policy.intervalDays}
+                    enabled={policy.enabled}
+                  />
+                </td>
               </tr>
             ))}
           </tbody>
