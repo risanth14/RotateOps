@@ -145,7 +145,7 @@ ENABLE_AI_SUMMARIES=true
 OPENAI_API_KEY="..."
 ```
 
-AI output is informational only and never controls job execution.
+AI output is informational only, and it will never control job execution.
 
 ## Security Notes
 
