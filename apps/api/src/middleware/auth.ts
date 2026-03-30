@@ -140,7 +140,10 @@ async function getLocalDemoAuthContext(): Promise<AuthContext> {
     auth0UserId: user.auth0UserId,
     token: {
       sub: user.auth0UserId,
-      org_id: organization.auth0OrgId
+      org_id: organization.auth0OrgId,
+      amr: ["mfa"],
+      auth_time: Math.floor(Date.now() / 1000),
+      acr: "urn:rotateops:local-step-up"
     }
   };
 }

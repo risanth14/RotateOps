@@ -1,10 +1,12 @@
 import { IntegrationMode, IntegrationStatus, Provider } from "@prisma/client";
 import { Router } from "express";
 import { z } from "zod";
+import { env } from "../config/env.js";
 import { asyncHandler } from "../lib/asyncHandler.js";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { createRotationJob, runRotationJob } from "../services/rotationService.js";
+import { assessStepUpFromToken } from "../services/stepUpService.js";
 
 const createSchema = z.object({
   provider: z.nativeEnum(Provider),
@@ -77,14 +79,22 @@ integrationsRouter.post(
 
   const actor = (req.headers["x-actor"] as string) || null;
   const consentGrantId = (req.body as { consentGrantId?: string }).consentGrantId || null;
+  const stepUp = assessStepUpFromToken(auth.token, env.STEP_UP_MAX_AGE_SECONDS);
 
   const job = await createRotationJob({
     integrationId: integration.id,
     policyId: integration.policy?.id ?? null,
-    triggeredBy: "manual"
+    triggeredBy: "manual",
+    organizationId: auth.organizationId,
+    actor: actor ?? auth.auth0UserId,
+    consentGrantId
   });
 
-  void runRotationJob(job.id);
+  void runRotationJob(job.id, {
+    stepUpSatisfied: stepUp.satisfied,
+    stepUpMethod: stepUp.method,
+    stepUpReason: stepUp.reason
+  });
 
   return res.status(202).json(job);
   })

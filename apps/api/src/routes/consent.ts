@@ -72,6 +72,15 @@ consentRouter.post(
       message: `Consent granted by ${grant.grantedBy} for scopes: ${grant.scopes.join(", ")}.`,
       actor: grant.grantedBy,
       consentGrantId: grant.id,
+      initiatorId: grant.grantedBy,
+      initiatorType: "user",
+      authorizationType: "consent_grant",
+      agentContext: {
+        agentId: "consent-api",
+        executionPath: "consent_route_create",
+        triggerSource: "api",
+        runMode: "interactive"
+      },
       metadata: {
         scopes: grant.scopes,
         expiresAt: grant.expiresAt?.toISOString() ?? null
@@ -126,6 +135,15 @@ consentRouter.get(
       message: `OAuth callback completed for consent grant ${grant.id}.`,
       actor: grant.grantedBy,
       consentGrantId: grant.id,
+      initiatorId: grant.grantedBy,
+      initiatorType: "user",
+      authorizationType: "consent_grant",
+      agentContext: {
+        agentId: "consent-api",
+        executionPath: "consent_callback",
+        triggerSource: "oauth_callback",
+        runMode: "interactive"
+      },
       metadata: {
         code: code ? `${code.slice(0, 4)}****` : "none",
         provider: integration.provider
@@ -176,6 +194,15 @@ consentRouter.delete(
       message: `Consent grant ${grant.id} revoked by ${actor}.`,
       actor,
       consentGrantId: grant.id,
+      initiatorId: actor,
+      initiatorType: "user",
+      authorizationType: "consent_grant",
+      agentContext: {
+        agentId: "consent-api",
+        executionPath: "consent_revoke",
+        triggerSource: "api",
+        runMode: "interactive"
+      },
       metadata: {
         scopes: grant.scopes,
         originalGrantedBy: grant.grantedBy

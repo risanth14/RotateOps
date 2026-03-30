@@ -1,100 +1,126 @@
-# RotateOps MVP
+# RotateOps
 
-RotateOps is a deterministic credential rotation orchestrator with an auditable pipeline:
+RotateOps is a deterministic credential rotation orchestrator for teams that need safer key lifecycle management with audit-first evidence. It runs scheduled or manual rotations, verifies propagation before revocation, records provenance-rich audit events, and supports provider-mode execution through a Token Vault adapter (`issue -> introspect -> revoke`).
 
-1. scheduler/manual trigger finds due integration
-2. connector issues replacement credential
-3. credential propagates to downstream targets
-4. verification runs
-5. old credential revokes only after verification succeeds
-6. audit trail is recorded
-7. Slack notification is sent
+## Why This Project Matters
 
-Optional AI summaries can generate plain-English compliance notes, but AI does not make execution decisions.
+- Secret rotation often fails at the dangerous moment between key issuance and revocation.
+- Most demos show success, but weak traceability during failure handling.
+- RotateOps focuses on operational safety:
+  - verify before revoke
+  - resumable pending states for protected actions
+  - explicit provenance for who authorized and who executed each sensitive step
 
-## Stack
+## Quickstart For Judges
 
-- Frontend: Next.js + TypeScript + Tailwind (`apps/web`)
-- Backend: Express + TypeScript (`apps/api`)
-- Database: PostgreSQL + Prisma
-- Jobs: cron-based scheduler (`node-cron`)
-- Notifications: Slack incoming webhook
-- Tests: Vitest rotation pipeline tests
+Use this path to get to a live demo quickly.
 
-## Repository Structure
-
-```text
-apps/
-  api/
-    prisma/
-    src/
-    tests/
-  web/
-    app/
-    components/
-    lib/
-packages/
-  shared/
-```
-
-## Prerequisites
-
-- Node.js 20+
-- npm 10+
-- Supabase project (Postgres)
-- Auth0 tenant + API configuration (domain, audience, M2M client)
-
-## Local Setup
-
-1. Install dependencies:
+1. Install dependencies.
 
 ```bash
 npm install
 ```
 
-2. Create env files:
+2. Create local env files.
 
 ```powershell
 Copy-Item .env.example apps/api/.env
 Copy-Item apps/web/.env.local.example apps/web/.env.local
 ```
 
-3. Update `apps/api/.env` with your Supabase values:
-
-- `DATABASE_URL`: Supabase pooled connection string (port `6543`)
-- `DIRECT_URL`: Supabase direct connection string (port `5432`, `sslmode=require`)
-- `AUTH0_DOMAIN`, `AUTH0_AUDIENCE`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`
-
-4. Generate Prisma client + apply migration:
+3. Generate Prisma client and run migrations.
 
 ```bash
 npm run prisma:generate
 npm run prisma:migrate
 ```
 
-5. Seed demo integrations:
+4. Seed demo integrations.
 
 ```bash
 npm run seed
 ```
 
-6. Start API + Web:
+5. Start both services.
 
 ```bash
 npm run dev:all
 ```
 
-Web runs on `http://localhost:3000`, API on `http://localhost:4000`.
+6. Open:
+- Web: `http://localhost:3000`
+- API health: `http://localhost:4000/health`
 
-## Demo Flow
+Judge shortcut: if auth configuration is unavailable in your environment, use local demo bypass values documented in `.env.example` and run in `APP_MODE=demo`.
 
-1. Open `/dashboard`
-2. Click **Seed Demo Integrations** (safe to run repeatedly)
-3. Open `/integrations` and click **Rotate Now**
-4. Watch `/jobs` and `/audit` for status and event timeline
+## Architecture Summary
 
-## API Endpoints
+### Frontend
 
+- Next.js dashboard for integrations, policies, jobs, and audit timeline.
+- Located in `apps/web`.
+
+### API + Orchestration
+
+- Express API with typed routes and middleware.
+- Rotation orchestration in `apps/api/src/services/rotationService.ts`.
+- Step-up authentication gating for high-risk actions with secure resume path.
+
+### Connectors + Token Vault
+
+- Connector abstraction for provider-specific behavior.
+- Demo mode uses generated mock secrets.
+- Provider mode uses Token Vault client for:
+  - issuing tokens
+  - introspecting active status
+  - revoking old tokens after verification
+
+### Data + Auditability
+
+- PostgreSQL + Prisma for jobs, integrations, policies, consent grants, and audit events.
+- Audit events include:
+  - initiator identity
+  - consent grant linkage
+  - execution context metadata
+
+### Reliability + Safety Controls
+
+- Verify before revoke ordering.
+- Rollback and manual intervention state on propagation/verification failure.
+- Pending/resume flow when step-up auth is required but incomplete.
+
+## 3-Minute Demo Script
+
+Use this exact script during judging.
+
+1. `00:00-00:20` — Problem framing.
+- Explain why blind key revocation causes outages.
+- State RotateOps promise: deterministic rotation with evidence.
+
+2. `00:20-00:45` — System overview.
+- Show dashboard + API health endpoint.
+- Mention demo vs provider mode.
+
+3. `00:45-01:20` — Trigger rotation.
+- Open Integrations.
+- Click `Rotate Now` on one demo integration.
+- Call out pipeline stages visible in Jobs/Audit.
+
+4. `01:20-01:55` — Show safety logic.
+- Highlight verify-before-revoke ordering in audit entries.
+- Show failure handling path (manual intervention/rollback events if configured).
+
+5. `01:55-02:25` — Show auth + consent traceability.
+- Show step-up-required/pending event behavior (if enabled in your run).
+- Show consent-linked audit records and provenance fields.
+
+6. `02:25-03:00` — Token Vault value.
+- Explain provider-mode path (`issue/introspect/revoke`).
+- Close with incident-readiness: who did what, under what authorization, and what executed the action.
+
+## API Endpoints (Core)
+
+- `GET /health`
 - `GET /integrations`
 - `POST /integrations`
 - `POST /integrations/:id/rotate-now`
@@ -103,50 +129,36 @@ Web runs on `http://localhost:3000`, API on `http://localhost:4000`.
 - `GET /jobs`
 - `POST /jobs`
 - `POST /jobs/:id/run`
+- `POST /jobs/:id/resume`
 - `GET /jobs/:id`
 - `GET /audit-events`
 - `POST /seed-demo`
+- `GET|POST|DELETE /integrations/:id/consent*`
 
-All endpoints except `GET /health` require a valid Auth0 Bearer token.
+All endpoints except `GET /health` require a valid Auth0 Bearer token unless local demo bypass is enabled.
 
-## Modes
-
-- `APP_MODE=demo`: safe mocked rotations (default)
-- `mode=provider` on an integration: production-oriented connector flow backed by the Token Vault adapter
-
-Provider mode now uses a Token Vault adapter (`issue/introspect/revoke`) for token lifecycle orchestration. Configure:
-- `TOKEN_VAULT_BASE_URL`
-- `TOKEN_VAULT_API_KEY`
-
-## Testing
+## Testing + Coverage
 
 ```bash
-npm test
+npm run lint --workspace @rotateops/api
+npm run typecheck --workspace @rotateops/api
+npm run test:coverage --workspace @rotateops/api
 ```
 
-Covers core pipeline behavior:
-- verify before revoke in success path
-- rollback + manual intervention on verification failure
+Coverage reports are written to `apps/api/coverage` (`text`, `lcov`, `html`).
 
-## Slack Notifications
+## Bonus Blog (Token Vault Achievements)
 
-Set in `apps/api/.env`:
+Building RotateOps forced us to confront a hard truth: many rotation demos are “happy-path only,” and they quietly assume credential changes are always safe, immediate, and reversible. In production, that assumption fails quickly. The most meaningful achievement in this project was integrating a Token Vault execution path that turns risky secret handling into a controlled lifecycle with observable checkpoints.
 
-```env
-SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
-```
+Before this integration, issuing a new secret and propagating it downstream looked simple, but it left several unanswered questions during incidents: Was the secret actually active? Which token was replaced? Who authorized this operation? Could we revoke safely without collateral damage? By introducing a Token Vault adapter, we changed that model from opaque updates to a staged protocol: issue, introspect, verify, then revoke. This sequencing gave us a concrete safety boundary. Revocation became an explicit post-verification action, not an optimistic side effect.
 
-## AI Summaries (Optional)
+A second achievement was traceability quality. We now enrich audit events with provenance metadata for initiator identity, consent grant linkage, and agent execution context. That sounds like “just logging,” but operationally it is much more. It gives reviewers and judges a trustworthy incident narrative: who initiated the action, what authorization covered it, and which system component executed each step. During a failed run, this context turns debugging from guesswork into timeline-based analysis.
 
-Set:
+Third, Token Vault integration created design pressure that improved our architecture. We had to separate connector responsibilities, formalize provider-mode behavior, and tighten failure semantics around rollback and manual intervention. That made our system more resilient even in demo mode, because the contract for “safe rotation” became explicit across all paths.
 
-```env
-ENABLE_AI_SUMMARIES=true
-OPENAI_API_KEY="..."
-```
-
-AI output is informational only, and it will never control job execution.
+Finally, this work improved submission readiness. In three minutes, we can demonstrate not only that RotateOps rotates credentials, but that it does so with governance-grade evidence and controlled authorization boundaries. The Token Vault layer is not a cosmetic add-on; it is the core enabler for credible, auditable, and incident-friendly credential lifecycle management.
 
 ## Security Notes
 
-See [`SECURITY.md`](./SECURITY.md) for production limitations and hardening checklist.
+See [`SECURITY.md`](./SECURITY.md) for hardening limitations and production checklist items.

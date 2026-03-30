@@ -94,6 +94,7 @@ model Integration {
   jobs               RotationJob[]
   auditEvents        AuditEvent[]
   secretTargets      SecretTarget[]
+  consentGrants      ConsentGrant[]
 }
 
 model RotationPolicy {

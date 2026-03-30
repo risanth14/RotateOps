@@ -20,6 +20,7 @@ const schema = z
     AUTH0_CLIENT_SECRET: z.string().min(1),
     AUTH0_ORG_CLAIM: z.string().default("org_id"),
     AUTH_BYPASS_DEMO: z.coerce.boolean().default(false),
+    STEP_UP_MAX_AGE_SECONDS: z.coerce.number().int().positive().default(900),
     TOKEN_VAULT_BASE_URL: z.string().url().optional(),
     TOKEN_VAULT_API_KEY: z.string().optional()
   })

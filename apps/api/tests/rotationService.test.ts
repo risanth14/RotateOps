@@ -107,7 +107,7 @@ describe("rotation pipeline", () => {
     });
     connectorMock.revokeOld.mockResolvedValue(undefined);
 
-    await runRotationJob("job-1");
+    await runRotationJob("job-1", { stepUpSatisfied: true, stepUpMethod: "amr" });
 
     expect(connectorMock.verify).toHaveBeenCalledTimes(1);
     expect(connectorMock.revokeOld).toHaveBeenCalledTimes(1);
@@ -158,7 +158,7 @@ describe("rotation pipeline", () => {
     });
     connectorMock.rollback.mockResolvedValue(undefined);
 
-    await runRotationJob("job-2");
+    await runRotationJob("job-2", { stepUpSatisfied: true, stepUpMethod: "amr" });
 
     expect(connectorMock.rollback).toHaveBeenCalledTimes(1);
     expect(connectorMock.revokeOld).not.toHaveBeenCalled();
@@ -166,5 +166,89 @@ describe("rotation pipeline", () => {
     const finalUpdate = prismaMock.rotationJob.update.mock.calls.at(-1)?.[0]?.data;
     expect(finalUpdate.status).toBe("manual_intervention");
     expect(finalUpdate.rollbackPerformed).toBe(true);
+  });
+
+  it("keeps high-risk jobs pending when step-up authentication is incomplete", async () => {
+    const { runRotationJob } = await import("../src/services/rotationService.js");
+
+    prismaMock.rotationJob.findUnique.mockResolvedValue({
+      id: "job-3",
+      integrationId: "integration-2",
+      startedAt: null,
+      actor: "auth0|user_1",
+      consentGrantId: null,
+      integration: {
+        id: "integration-2",
+        provider: "vercel",
+        name: "Vercel Token",
+        mode: "provider",
+        secretFingerprint: "old_fp"
+      },
+      policy: null
+    });
+
+    const result = await runRotationJob("job-3", {
+      stepUpSatisfied: false,
+      stepUpReason: "missing_step_up_authentication"
+    });
+
+    expect(result).toMatchObject({
+      started: false,
+      status: "pending",
+      stepUpRequired: true
+    });
+    expect(connectorMock.rotate).not.toHaveBeenCalled();
+
+    const pendingUpdate = prismaMock.rotationJob.update.mock.calls.at(-1)?.[0]?.data;
+    expect(pendingUpdate.status).toBe("pending");
+    expect(pendingUpdate.failureReason).toContain("Step-up authentication");
+
+    const gatedEvent = createAuditEventMock.mock.calls.find((call) => call[0].eventType === "step_up_required")?.[0];
+    expect(gatedEvent?.metadata?.highRiskActions).toEqual(
+      expect.arrayContaining(["privileged_provider_rotation", "revoke_old_credential"])
+    );
+  });
+
+  it("records step-up verification event before running high-risk rotations", async () => {
+    const { runRotationJob } = await import("../src/services/rotationService.js");
+
+    prismaMock.rotationJob.findUnique.mockResolvedValue({
+      id: "job-4",
+      integrationId: "integration-3",
+      startedAt: null,
+      actor: "auth0|user_1",
+      consentGrantId: null,
+      integration: {
+        id: "integration-3",
+        provider: "github",
+        name: "GitHub Token",
+        mode: "provider",
+        secretFingerprint: "old_finger"
+      },
+      policy: null
+    });
+
+    connectorMock.rotate.mockResolvedValue({
+      raw: "ghp_xxxxxx",
+      fingerprint: "fp_new_789",
+      maskedReference: "gh****yy"
+    });
+    connectorMock.propagate.mockResolvedValue({
+      ok: true,
+      targets: [{ targetId: "target-1", name: "Runtime Env", status: "success", detail: "done" }]
+    });
+    connectorMock.verify.mockResolvedValue({
+      ok: true,
+      detail: "Verification success"
+    });
+    connectorMock.revokeOld.mockResolvedValue(undefined);
+
+    await runRotationJob("job-4", { stepUpSatisfied: true, stepUpMethod: "amr" });
+
+    const verifiedEventIndex = createAuditEventMock.mock.calls.findIndex((call) => call[0].eventType === "step_up_verified");
+    const startedEventIndex = createAuditEventMock.mock.calls.findIndex((call) => call[0].eventType === "rotation_started");
+    expect(verifiedEventIndex).toBeGreaterThanOrEqual(0);
+    expect(startedEventIndex).toBeGreaterThanOrEqual(0);
+    expect(verifiedEventIndex).toBeLessThan(startedEventIndex);
   });
 });
