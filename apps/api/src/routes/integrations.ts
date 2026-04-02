@@ -36,6 +36,28 @@ integrationsRouter.get(
   })
 );
 
+integrationsRouter.get(
+  "/:id",
+  asyncHandler(async (req, res) => {
+  const auth = requireAuth(req);
+  const item = await prisma.integration.findFirst({
+    where: {
+      id: req.params.id,
+      organizationId: auth.organizationId
+    },
+    include: {
+      policy: true
+    }
+  });
+
+  if (!item) {
+    return res.status(404).json({ error: "Integration not found." });
+  }
+
+  return res.json(item);
+  })
+);
+
 integrationsRouter.post(
   "/",
   asyncHandler(async (req, res) => {

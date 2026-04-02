@@ -155,6 +155,11 @@ export const authMiddleware: RequestHandler = asyncHandler(async (req, res, next
   }
 
   const token = getBearerToken(req.headers.authorization);
+  if (!token && env.NODE_ENV === "development" && env.APP_MODE === "demo") {
+    req.auth = await getLocalDemoAuthContext();
+    return next();
+  }
+
   if (!token) {
     return res.status(401).json({ error: "Unauthorized" });
   }

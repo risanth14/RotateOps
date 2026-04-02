@@ -6,6 +6,49 @@ import { createPortal } from "react-dom";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
 
+type RotationJobStatus = "pending" | "running" | "success" | "failed" | "manual_intervention";
+
+type RotationJobDetail = {
+  id: string;
+  status: RotationJobStatus;
+  failureReason?: string | null;
+  integration?: {
+    name?: string;
+  };
+};
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function pollRotationResult(jobId: string): Promise<{ status: RotationJobStatus; failureReason?: string | null }> {
+  const maxAttempts = 25;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    await sleep(2000);
+    const response = await fetch(`${API_BASE}/jobs/${jobId}`, {
+      method: "GET",
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error(`Unable to read rotation status (${response.status})`);
+    }
+
+    const job = (await response.json()) as RotationJobDetail;
+    if (job.status === "success" || job.status === "failed" || job.status === "manual_intervention") {
+      return {
+        status: job.status,
+        failureReason: job.failureReason
+      };
+    }
+  }
+
+  return {
+    status: "running",
+    failureReason: "Rotation is still in progress. Check the Jobs page for final status."
+  };
+}
+
 function Popup({
   open,
   title,
@@ -42,9 +85,12 @@ function Popup({
   );
 }
 
-export function RotateNowButton({ integrationId }: { integrationId: string }) {
+export function RotateNowButton({ integrationId }: Readonly<{ integrationId: string }>) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState("Rotation Update");
+  const [dialogLines, setDialogLines] = useState<string[]>([]);
   const router = useRouter();
 
   return (
@@ -59,10 +105,42 @@ export function RotateNowButton({ integrationId }: { integrationId: string }) {
               if (!response.ok) {
                 throw new Error(`API error (${response.status})`);
               }
+
+              const createdJob = (await response.json()) as { id?: string };
+              const jobId = createdJob.id;
+              setDialogTitle("Rotation Started");
+              setDialogLines([
+                "Rotation request accepted.",
+                jobId ? `Job: ${jobId}` : "Job has been queued.",
+                "Checking status..."
+              ]);
+              setDialogOpen(true);
+
+              if (jobId) {
+                const result = await pollRotationResult(jobId);
+                if (result.status === "success") {
+                  setDialogTitle("Rotation Successful");
+                  setDialogLines(["Credential rotation completed successfully.", `Job: ${jobId}`]);
+                } else if (result.status === "running") {
+                  setDialogTitle("Rotation In Progress");
+                  setDialogLines([result.failureReason ?? "Rotation is still running.", `Job: ${jobId}`]);
+                } else {
+                  setDialogTitle("Rotation Needs Attention");
+                  setDialogLines([
+                    result.failureReason ?? "Rotation did not complete successfully.",
+                    `Job: ${jobId}`,
+                    "Open Jobs for details."
+                  ]);
+                }
+              }
+
               router.refresh();
             } catch (err) {
               const message = err instanceof Error ? err.message : "Request failed";
               setError(message);
+              setDialogTitle("Rotation Failed to Start");
+              setDialogLines([message]);
+              setDialogOpen(true);
             }
           });
         }}
@@ -71,6 +149,7 @@ export function RotateNowButton({ integrationId }: { integrationId: string }) {
         {isPending ? "Starting..." : "Rotate Now"}
       </button>
       {error ? <p className="mt-2 text-xs text-rose-600">{error}</p> : null}
+      <Popup open={dialogOpen} title={dialogTitle} lines={dialogLines} onClose={() => setDialogOpen(false)} />
     </>
   );
 }
