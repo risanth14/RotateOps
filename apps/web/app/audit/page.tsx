@@ -1,5 +1,13 @@
 import { api } from "../../lib/api";
 
+function formatJobLabel(jobId: string | null | undefined) {
+  if (!jobId) {
+    return "Job: n/a";
+  }
+
+  return `Job: ${jobId.slice(0, 12)}`;
+}
+
 export default async function AuditPage() {
   const events = await api.getAuditEvents();
 
@@ -18,7 +26,7 @@ export default async function AuditPage() {
               <p className="text-xs text-slate-500">{new Date(event.createdAt).toLocaleString()}</p>
             </div>
             <p className="mt-2 text-sm">{event.message}</p>
-            <p className="mt-1 text-xs text-slate-500">Job: {event.jobId.slice(0, 12)}</p>
+            <p className="mt-1 text-xs text-slate-500">{formatJobLabel(event.jobId)}</p>
           </article>
         ))}
       </div>
