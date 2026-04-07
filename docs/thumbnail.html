@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>RotateOps — Hackathon Thumbnail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,300;0,400;0,600;0,700;1,300&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    width: 1280px;
+    height: 720px;
+    overflow: hidden;
+    background: #05101e;
+    font-family: 'Chakra Petch', sans-serif;
+    position: relative;
+    isolation: isolate;
+  }
+
+  /* — Background grid — */
+  .grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,232,176,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,232,176,0.035) 1px, transparent 1px);
+    background-size: 48px 48px;
+    z-index: 0;
+  }
+
+  /* — Ambient glow blobs — */
+  .glow-ring {
+    position: absolute;
+    right: 160px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 520px;
+    height: 520px;
+    background: radial-gradient(circle, rgba(0,232,176,0.10) 0%, rgba(0,232,176,0.03) 45%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+  }
+
+  .glow-left {
+    position: absolute;
+    left: -120px;
+    bottom: -80px;
+    width: 360px;
+    height: 360px;
+    background: radial-gradient(circle, rgba(255,85,51,0.07) 0%, transparent 65%);
+    border-radius: 50%;
+    z-index: 0;
+  }
+
+  /* — Left content — */
+  .left {
+    position: absolute;
+    left: 72px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    color: #00e8b0;
+    text-transform: uppercase;
+    margin-bottom: 22px;
+  }
+
+  .eyebrow-dot {
+    width: 7px;
+    height: 7px;
+    background: #00e8b0;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #00e8b0, 0 0 20px rgba(0,232,176,0.5);
+    animation: blink 2.4s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; box-shadow: 0 0 10px #00e8b0, 0 0 22px rgba(0,232,176,0.5); }
+    50%       { opacity: 0.4; box-shadow: 0 0 4px #00e8b0; }
+  }
+
+  .rule {
+    width: 56px;
+    height: 2px;
+    background: linear-gradient(90deg, #00e8b0, transparent);
+    margin-bottom: 18px;
+  }
+
+  .title-rotate {
+    font-size: 118px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.025em;
+    color: #dde8f5;
+    text-transform: uppercase;
+  }
+
+  .title-ops {
+    font-size: 118px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.025em;
+    color: #00e8b0;
+    text-transform: uppercase;
+    margin-bottom: 22px;
+    text-shadow: 0 0 60px rgba(0,232,176,0.25);
+  }
+
+  .tagline {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: #4a7a9b;
+    letter-spacing: 0.03em;
+    margin-bottom: 36px;
+    max-width: 460px;
+  }
+
+  .tagline em {
+    color: #8ab4cf;
+    font-style: normal;
+  }
+
+  .badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    padding: 5px 13px;
+    border: 1px solid rgba(0,232,176,0.2);
+    color: rgba(0,232,176,0.6);
+    border-radius: 3px;
+    background: rgba(0,232,176,0.04);
+    text-transform: uppercase;
+  }
+
+  /* — Right side ring — */
+  .ring-wrap {
+    position: absolute;
+    right: -95px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 600px;
+    height: 600px;
+    z-index: 5;
+  }
+
+  .ring-wrap svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* — Floating credential pills — */
+  .cred {
+    position: absolute;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: rgba(0,232,176,0.28);
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    z-index: 6;
+    pointer-events: none;
+  }
+
+  .cred-revoked {
+    position: absolute;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,85,51,0.30);
+    letter-spacing: 0.06em;
+    text-decoration: line-through;
+    white-space: nowrap;
+    z-index: 6;
+    pointer-events: none;
+  }
+
+  /* — Bottom accent bar — */
+  .bottom-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #00e8b0 25%, #00e8b0 55%, #ff5533 75%, transparent);
+    opacity: 0.45;
+    z-index: 20;
+  }
+
+  /* — Top left corner tick — */
+  .corner-tick {
+    position: absolute;
+    top: 0; left: 72px;
+    width: 100px; height: 2px;
+    background: #00e8b0;
+    opacity: 0.45;
+    z-index: 20;
+  }
+
+  /* — Version tag — */
+  .version {
+    position: absolute;
+    bottom: 24px;
+    left: 72px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: rgba(74,122,155,0.6);
+    letter-spacing: 0.14em;
+    z-index: 20;
+  }
+</style>
+</head>
+<body>
+
+  <div class="grid"></div>
+  <div class="glow-ring"></div>
+  <div class="glow-left"></div>
+  <div class="corner-tick"></div>
+
+  <!-- Left copy -->
+  <div class="left">
+    <div class="eyebrow">
+      <span class="eyebrow-dot"></span>
+      Hackathon Project &nbsp;·&nbsp; 2026
+    </div>
+    <div class="rule"></div>
+    <div class="title-rotate">ROTATE</div>
+    <div class="title-ops">OPS</div>
+    <p class="tagline">
+      <em>Deterministic credential rotation</em> with<br>
+      verification-gated revocation &amp; full audit trail
+    </p>
+    <div class="badges">
+      <span class="badge">GitHub</span>
+      <span class="badge">Stripe</span>
+      <span class="badge">Vercel</span>
+      <span class="badge">Step-Up Auth</span>
+      <span class="badge">Audit Trail</span>
+    </div>
+  </div>
+
+  <!-- Floating credential fragments -->
+  <div class="cred"      style="top: 96px;  right: 440px;">sk_live_••••••••••3F9a</div>
+  <div class="cred"      style="top: 218px; right: 195px; opacity: 0.55;">ghp_••••••••••••xK2p</div>
+  <div class="cred"      style="bottom: 128px; right: 395px;">pk_live_••••••••••9Qr1</div>
+  <div class="cred-revoked" style="bottom: 198px; right: 200px;">sk_live_oldK3y••••r0tate</div>
+
+  <!-- Ring visual -->
+  <div class="ring-wrap">
+    <svg viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="6" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-soft" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="12" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- Soft halo rings (static) -->
+      <circle cx="300" cy="300" r="258" stroke="#00e8b0" stroke-width="28" opacity="0.03"/>
+      <circle cx="300" cy="300" r="192" stroke="#00e8b0" stroke-width="32" opacity="0.04"/>
+
+      <!-- Outer ring group — spins CW -->
+      <g>
+        <animateTransform attributeName="transform" type="rotate"
+          from="0 300 300" to="360 300 300" dur="28s" repeatCount="indefinite"/>
+        <!-- Fine outer dashes -->
+        <circle cx="300" cy="300" r="268"
+          stroke="#00e8b0" stroke-width="1" stroke-dasharray="5 9" opacity="0.20"/>
+        <!-- Bold arc segments -->
+        <circle cx="300" cy="300" r="252"
+          stroke="#00e8b0" stroke-width="2.5"
+          stroke-dasharray="135 55 75 100"
+          stroke-linecap="round" opacity="0.55" filter="url(#glow)"/>
+        <!-- Cardinal dots on outer ring -->
+        <circle cx="300" cy="32"  r="5" fill="#00e8b0" opacity="0.9">
+          <animate attributeName="opacity" values="0.9;0.3;0.9" dur="2.2s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="568" cy="300" r="5" fill="#00e8b0" opacity="0.7">
+          <animate attributeName="opacity" values="0.3;0.9;0.3" dur="2.2s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="300" cy="568" r="5" fill="#ff5533" opacity="0.65">
+          <animate attributeName="opacity" values="0.65;0.2;0.65" dur="2.8s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="32"  cy="300" r="4" fill="#00e8b0" opacity="0.45">
+          <animate attributeName="opacity" values="0.45;0.8;0.45" dur="1.9s" repeatCount="indefinite"/>
+        </circle>
+        <!-- Tick marks -->
+        <line x1="300" y1="32"  x2="300" y2="54"  stroke="#00e8b0" stroke-width="2" opacity="0.6"/>
+        <line x1="568" y1="300" x2="546" y2="300" stroke="#00e8b0" stroke-width="2" opacity="0.6"/>
+        <line x1="300" y1="568" x2="300" y2="546" stroke="#ff5533" stroke-width="2" opacity="0.6"/>
+        <line x1="32"  y1="300" x2="54"  y2="300" stroke="#00e8b0" stroke-width="2" opacity="0.4"/>
+      </g>
+
+      <!-- Inner ring group — spins CCW -->
+      <g>
+        <animateTransform attributeName="transform" type="rotate"
+          from="0 300 300" to="-360 300 300" dur="18s" repeatCount="indefinite"/>
+        <circle cx="300" cy="300" r="208"
+          stroke="#00e8b0" stroke-width="1" stroke-dasharray="16 22" opacity="0.18"/>
+        <circle cx="300" cy="300" r="192"
+          stroke="#00e8b0" stroke-width="3"
+          stroke-dasharray="100 42 55 80"
+          stroke-linecap="round" opacity="0.65" filter="url(#glow)"/>
+        <!-- Inner arc dots -->
+        <circle cx="300" cy="92"  r="4" fill="#00e8b0" opacity="0.6"/>
+        <circle cx="508" cy="300" r="3" fill="#00e8b0" opacity="0.4"/>
+        <circle cx="300" cy="508" r="4" fill="#ff5533" opacity="0.5"/>
+        <circle cx="92"  cy="300" r="3" fill="#00e8b0" opacity="0.35"/>
+      </g>
+
+      <!-- Innermost ring — slow CW -->
+      <g>
+        <animateTransform attributeName="transform" type="rotate"
+          from="0 300 300" to="360 300 300" dur="44s" repeatCount="indefinite"/>
+        <circle cx="300" cy="300" r="152"
+          stroke="#00e8b0" stroke-width="1" stroke-dasharray="8 18" opacity="0.14"/>
+        <circle cx="300" cy="300" r="140"
+          stroke="#00e8b0" stroke-width="1.5"
+          stroke-dasharray="55 30 20 60"
+          stroke-linecap="round" opacity="0.28"/>
+      </g>
+
+      <!-- Key icon — static, centered -->
+      <!-- Outer glow disk -->
+      <circle cx="300" cy="300" r="60" fill="rgba(0,232,176,0.04)" stroke="rgba(0,232,176,0.12)" stroke-width="1"/>
+      <!-- Key bow (circular part) -->
+      <circle cx="274" cy="300" r="30" stroke="#00e8b0" stroke-width="3"
+        fill="rgba(0,232,176,0.06)" filter="url(#glow-soft)"/>
+      <circle cx="274" cy="300" r="14" stroke="#00e8b0" stroke-width="2"
+        fill="rgba(5,16,30,0.9)" opacity="0.7"/>
+      <!-- Key shaft -->
+      <rect x="304" y="293" width="56" height="14" rx="7" fill="#00e8b0" opacity="0.9" filter="url(#glow)"/>
+      <!-- Key teeth -->
+      <rect x="330" y="307" width="8"  height="16" rx="4" fill="#00e8b0" opacity="0.85"/>
+      <rect x="348" y="307" width="8"  height="11" rx="4" fill="#00e8b0" opacity="0.85"/>
+    </svg>
+  </div>
+
+  <div class="version">v0.1.0 — RotateOps</div>
+  <div class="bottom-bar"></div>
+
+</body>
+</html>
